@@ -179,7 +179,7 @@ public class Localization {
             ENABLE_ALPHA = "Прозрачные удаленные сообщения";
             ALPHA_WARNING = "Эта функция кушает очень много";
             GENERAL = "Общие";
-            THANKS = "Спасибо @bleizix";
+            THANKS = "Сделано с ❤️ @YhellsingY & @rybilov";
             RE_EXTERA_SETTINGS = "Настройки Ne:Extera";
             SAVE_DELETED_MESSAGES = "Сохранять удаленные сообщения";
             SAVE_BOT_CHATS = "Сохранять в чатах с ботами";
@@ -346,7 +346,7 @@ public class Localization {
             ENABLE_ALPHA = "Прозорі видалені повідомлення";
             ALPHA_WARNING = "Ця функція використовує дуже багато ресурсів";
             GENERAL = "Загальні";
-            THANKS = "Дякуємо @bleizix";
+            THANKS = "Зроблено з ❤️ @YhellsingY & @rybilov";
             RE_EXTERA_SETTINGS = "Налаштування Ne:Extera";
             SAVE_DELETED_MESSAGES = "Зберігати видалені повідомлення";
             SAVE_BOT_CHATS = "Зберігати в чатах з ботами";
@@ -511,7 +511,7 @@ public class Localization {
         HIDE_ONLINE_STATUS = "Don't send \"online\"";
         NO_READ_STORIES = "Don't read stories";
         GENERAL = "General";
-        THANKS = "Thanks to @bleizix";
+        THANKS = "Made with ❤️ by @YhellsingY & @rybilov";
         ENABLE_ALPHA = "Transparent deleted messages";
         ALPHA_WARNING = "This function eats a lot of cpu";
         RE_EXTERA_SETTINGS = "Ne:Extera Settings";
