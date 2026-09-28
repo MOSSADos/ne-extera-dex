@@ -77,7 +77,11 @@ tasks.register("aarToDex", Exec) {
         def dexOut = "$buildDir/dex/"
         mkdir dexOut
 
-        commandLine "${android.sdkDirectory}/build-tools/36.0.0/d8",
+        def d8Command = System.properties['os.name'].toLowerCase().contains('windows')
+            ? "${android.sdkDirectory}/build-tools/36.0.0/d8.bat"
+            : "${android.sdkDirectory}/build-tools/36.0.0/d8"
+
+        commandLine d8Command,
                 aarPath,
                 "--output", dexOut
     }
