@@ -33,18 +33,18 @@ jobs:
     - name: Copy classes.dex to root
       run: cp build/dex/classes.dex .
 
-    - name: Build loader.plugin
+    - name: Build ne_extera_loader.plugin
       run: |
         python3 loader/build.py
-        cp build/plugin/loader.plugin .
+        cp build/plugin/ne_extera_loader.plugin .
 
     - name: Upload Dev artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: re-extera-dev
+        name: ne-extera-dev
         path: |
           classes.dex
-          loader.plugin
+          ne_extera_loader.plugin
 
     - name: Parse tag for release name
       id: parse_tag
@@ -61,8 +61,8 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/v')
       uses: softprops/action-gh-release@v2
       with:
-        name: v${{ steps.parse_tag.outputs.plugin }} for ${{ steps.parse_tag.outputs.tg }}
+        name: Ne:Extera v${{ steps.parse_tag.outputs.plugin }} for exteraGram ${{ steps.parse_tag.outputs.tg }}
         files: |
           classes.dex
-          loader.plugin
+          ne_extera_loader.plugin
         generate_release_notes: true
