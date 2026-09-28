@@ -1,0 +1,55 @@
+package ni.shikatu.ne_extera.hooks.localecontroller;
+
+import de.robv.android.xposed.XC_MethodHook;
+import ni.shikatu.ne_extera.db.NeExteraDb;
+import ni.shikatu.ne_extera.settings.Settings;
+import org.telegram.tgnet.TLRPC;
+
+public class FormatUserStatus extends XC_MethodHook {
+    private static final ThreadLocal<TLRPC.UserStatus> origStatusLocal = new ThreadLocal<>();
+
+    public void beforeHookedMethod(XC_MethodHook.MethodHookParam param) {
+        if (!Settings.getSaveLastOnline()) {
+            return;
+        }
+        TLRPC.User user = (TLRPC.User) param.args[1];
+        if (user == null || user.status == null) {
+            return;
+        }
+
+        boolean isHidden = (user.status instanceof TLRPC.TL_userStatusRecently) ||
+                           (user.status instanceof TLRPC.TL_userStatusLastWeek) ||
+                           (user.status instanceof TLRPC.TL_userStatusLastMonth) ||
+                           (user.status instanceof TLRPC.TL_userStatusEmpty);
+
+        if (isHidden) {
+            int wasOnline = NeExteraDb.get().getLastOnline(user.id);
+            if (wasOnline > 0) {
+                origStatusLocal.set(user.status);
+                TLRPC.TL_userStatusOffline exactStatus = new TLRPC.TL_userStatusOffline();
+                exactStatus.expires = wasOnline;
+                user.status = exactStatus;
+            }
+        }
+    }
+
+    public void afterHookedMethod(XC_MethodHook.MethodHookParam param) {
+        if (!Settings.getSaveLastOnline()) {
+            return;
+        }
+        TLRPC.User user = (TLRPC.User) param.args[1];
+        if (user == null) {
+            return;
+        }
+        TLRPC.UserStatus origStatus = origStatusLocal.get();
+        if (origStatus != null) {
+            boolean wasOffline = user.status instanceof TLRPC.TL_userStatusOffline;
+            user.status = origStatus; // restore original status
+            origStatusLocal.remove();
+            String res = (String) param.getResult();
+            if (res != null && wasOffline) {
+                param.setResult(res + " *");
+            }
+        }
+    }
+}

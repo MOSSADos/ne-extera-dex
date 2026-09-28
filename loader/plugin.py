@@ -79,7 +79,7 @@ class Plugin(BasePlugin):
         items.append(Text(
             text=_localize("dex_settings"),
             icon="msg_settings",
-            on_click=lambda v: self._open_re_extera_settings()
+            on_click=lambda v: self._open_ne_extera_settings()
         ))
 
         return items
@@ -296,7 +296,7 @@ class Plugin(BasePlugin):
                 
         self._show_list_dialog("Select Release", labels, on_click)
 
-    def _open_re_extera_settings(self):
+    def _open_ne_extera_settings(self):
         try:
             if self.loader is None or self.loader.dex_main_class is None:
                 self.log("DEX not loaded")

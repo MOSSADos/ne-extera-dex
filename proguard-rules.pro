@@ -20,6 +20,6 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
--keep class ni.shikatu.re_extera.Main {
+-keep class ni.shikatu.ne_extera.Main {
     *;
 }

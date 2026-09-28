@@ -1,5 +1,5 @@
 name: 🐛 Bug Report
-description: Create a report to help us improve re:extera
+description: Create a report to help us improve Ne:Extera
 title: "[Bug]: "
 labels: ["bug"]
 body:
@@ -30,7 +30,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: re:extera & Telegram Version
+      label: Ne:Extera & Telegram Version
       description: What version of the plugin and Telegram are you using? (e.g. plugin v1.7.7, TG v12.9.0)
       placeholder: Plugin vX.X.X, Telegram vX.X.X
     validations:

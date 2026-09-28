@@ -1,0 +1,26 @@
+package ni.shikatu.ne_extera.hooks.pluginsengine;
+
+import com.exteragram.messenger.plugins.Plugin;
+import de.robv.android.xposed.XC_MethodHook;
+import java.util.Set;
+import java.util.function.Predicate;
+import ni.shikatu.ne_extera.settings.newui.SettingsFragmentNew;
+import org.telegram.ui.ActionBar.BaseFragment;
+
+public class OpenSettingsHook extends XC_MethodHook {
+    private static final Set<String> RE_EXTERA_PLUGIN_IDS = new java.util.HashSet<>(java.util.Arrays.asList("ne_extera_dex", "ne_extera_dex_local_debug", "ne_extera_dex_unstable", "ne_extera_loader"));
+
+    public void beforeHookedMethod(XC_MethodHook.MethodHookParam param) {
+        final Plugin plugin = (Plugin) param.args[0];
+        BaseFragment fragment = (BaseFragment) param.args[1];
+        if (plugin != null && fragment != null && RE_EXTERA_PLUGIN_IDS.stream().anyMatch(new Predicate() { 
+            @Override // java.util.function.Predicate
+            public final boolean test(Object obj) {
+                return java.util.Objects.equals(plugin.getId(), (String) obj);
+            }
+        })) {
+            fragment.presentFragment(new SettingsFragmentNew());
+            param.setResult((Object) null);
+        }
+    }
+}

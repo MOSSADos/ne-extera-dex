@@ -1,4 +1,4 @@
-# re:extera — Agent Guide
+# Ne:Extera — Agent Guide
 
 ## What this is
 
@@ -31,11 +31,11 @@ re-extera/
 │   ├── plugin.py                 # Main exteraGram BasePlugin implementation & UI dialogs
 │   ├── metadata.py               # Plugin metadata (__version__, __id__, __min_version__)
 │   └── (utils.py, constants.py, imports.py)
-└── src/main/java/ni/shikatu/re_extera/
+└── src/main/java/ni/shikatu/ne_extera/
     ├── Main.java                 # Entry point: initAndStart() → DB init & hooks
     ├── Defaults.java             # Constants for Ghost mode (typing, reading, etc.)
-    ├── db/                       # Custom SQLite implementation (re_extera.db)
-    │   ├── ReExteraDb.java       # Database helper and CRUD operations (HandlerThread)
+    ├── db/                       # Custom SQLite implementation (ne_extera.db)
+    │   ├── NeExteraDb.java       # Database helper and CRUD operations (HandlerThread)
     │   └── (Entities: DialogExclusion, ShadowbanEntry)
     ├── hooks/                    # ~50+ Xposed hooks across Telegram classes
     │   ├── HookInit.java         # Central hook registry via XposedBridge
@@ -49,7 +49,7 @@ re-extera/
     ├── localization/
     │   └── Localization.java     # Translations for DEX settings
     ├── settings/
-    │   ├── Settings.java         # SharedPreferences abstraction ("re_extera")
+    │   ├── Settings.java         # SharedPreferences abstraction ("ne_extera")
     │   └── newui/                # Settings screen fragments (GhostFragment, CustomizationFragment, etc.)
     ├── ui/                       # Additional UI components
     │   ├── DeletedMessagesInChatFragment.java
@@ -64,10 +64,10 @@ re-extera/
 
 ## Architecture
 
-- **Entry point**: `ni.shikatu.re_extera.Main.initAndStart()` — called by the Python loader after DEX injection
+- **Entry point**: `ni.shikatu.ne_extera.Main.initAndStart()` — called by the Python loader after DEX injection
 - **Hooking**: Uses `de.robv.android.xposed.XposedBridge` to hook ~50+ exteraGram/Telegram methods at runtime
-- **Settings**: `SharedPreferences("re_extera")` — boolean/int/float/string key-value store
-- **Database**: Custom SQLite (`re_extera.db`, version 11) with 7 tables: `deleted_keys`, `message_edits`, `exception_users`, `regex_filters`, `shadowban_users`, `read_events`, `last_online_users`. All writes go through a dedicated HandlerThread.
+- **Settings**: `SharedPreferences("ne_extera")` — boolean/int/float/string key-value store
+- **Database**: Custom SQLite (`ne_extera.db`, version 11) with 7 tables: `deleted_keys`, `message_edits`, `exception_users`, `regex_filters`, `shadowban_users`, `read_events`, `last_online_users`. All writes go through a dedicated HandlerThread.
 - **Ghost mode**: Intercepts `ConnectionsManager.sendRequestInternal` to block typing/reading/online/stories requests. Request types defined in `Defaults.java`.
 - **Versioning**: Auto-generated from git tags. Tag format `v<plugin_ver>-<tg_ver>` (e.g. `v2.8.3-12.9.0`). Dev builds use `{yyyyMMddHHmmss}-{commit}`.
 
@@ -85,7 +85,7 @@ re-extera/
 - DEX loading: tries `InMemoryDexClassLoader` first, falls back to `DexClassLoader` from file
 - Update checks rate-limited (60s cooldown)
 - Min exteraGram version: `12.8.1` (from `loader/metadata.py`)
-- Plugin metadata: `__id__ = "re_extera_loader"`, `__version__ = "2.8.3"`
+- Plugin metadata: `__id__ = "ne_extera_loader"`, `__version__ = "2.8.3"`
 
 ## Hooks troubleshooting
 
@@ -120,7 +120,7 @@ Types observed: `fix`, `feat`, `refactor`, `ci`, `chore`, `build`, `docs`. Scope
 - `Main.VERSION` comes from `BuildConfig.RE_EXTERA_VERSION` (buildConfig enabled)
 - `Main.VERSION_CODE` is a hardcoded integer (currently 12) — bump on significant releases
 - `anyAccountIsPremium()` in HookInit disables Local Premium if any account has real premium
-- ProGuard keeps `ni.shikatu.re_extera.Main` entirely (`-keep class` in `proguard-rules.pro`)
+- ProGuard keeps `ni.shikatu.ne_extera.Main` entirely (`-keep class` in `proguard-rules.pro`)
 - Local DEX path (for sideloading): `/storage/emulated/0/Android/media/com.exteragram.messenger/classes.dex`
 
 ## Debugging
@@ -165,12 +165,12 @@ def send_cmd(cmd):
         s.connect(('127.0.0.1', 42690))
         s.sendall(json.dumps(cmd).encode('utf-8'))
 
-send_cmd({'@': 'write_plugin', '#': 1, 'plugin_id': 're_extera_loader', 'content': content})
-send_cmd({'@': 'reload_plugin', '#': 2, 'plugin_id': 're_extera_loader'})
+send_cmd({'@': 'write_plugin', '#': 1, 'plugin_id': 'ne_extera_loader', 'content': content})
+send_cmd({'@': 'reload_plugin', '#': 2, 'plugin_id': 'ne_extera_loader'})
 print('Plugin pushed and reloaded successfully!')
 "
 ```
 
 ### Debug errors
-- View logs via ADB: `adb logcat -d | grep -iE 're_extera|re:extera|chaquopy'`
+- View logs via ADB: `adb logcat -d | grep -iE 'ne_extera|Ne:Extera|chaquopy'`
 - Fallback: ask user copy logs and send to you: plugin settings -> `Copy logs`/`Скопировать логи`/`Скопіювати логи` (button will copy logs to phone's clipboard)

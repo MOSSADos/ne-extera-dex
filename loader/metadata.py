@@ -1,5 +1,5 @@
-__id__ = "re_extera_loader"
-__name__ = "aartzz's re:extera"
+__id__ = "ne_extera_loader"
+__name__ = "aartzz's Ne:Extera"
 __description__ = "Actively maintained FOSS fork. Enable ghost mode, save deleted messages and more!"
 __author__ = "@shiawasez | @shikaatuxplugins \noriginal author: @bleizixPlugins\nFOSS recovery by @fossSquad & @migor1103"
 __version__ = "2.9.0"

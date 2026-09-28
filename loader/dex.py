@@ -326,11 +326,11 @@ class Loader:
     def _update_plugin_file(self, plugin_bytes):
         try:
             if getattr(self.plugin, "_is_elyx_update", False):
-                dl_path = os.path.join("/sdcard/Download", "re_extera_loader.elyx")
+                dl_path = os.path.join("/sdcard/Download", "ne_extera_loader.elyx")
                 with open(dl_path, "wb") as f:
                     f.write(plugin_bytes)
                 self.plugin.log(f"Elyx update saved to {dl_path}")
-                AndroidUtilities.runOnUIThread(UIRunnable(lambda: BulletinHelper.show_info("re:extera .elyx update downloaded to Downloads directory! Please install from file.", get_last_fragment())))
+                AndroidUtilities.runOnUIThread(UIRunnable(lambda: BulletinHelper.show_info("Ne:Extera .elyx update downloaded to Downloads directory! Please install from file.", get_last_fragment())))
                 return
 
             plugin_path = __file__
@@ -458,7 +458,7 @@ class Loader:
             def on_ui():
                 context = get_last_fragment().getParentActivity()
                 bld = AlertDialogBuilder(context)
-                bld.set_title(f"re:extera has updated to version {remote_version}")
+                bld.set_title(f"Ne:Extera has updated to version {remote_version}")
                 bld.set_message(changelog_text)
                 bld.set_positive_button("Update", do_update)
                 bld.set_negative_button("Later", lambda *args: args[0].dismiss() if args else None)

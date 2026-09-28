@@ -39,7 +39,7 @@ def getVersionName(Project project) {
 }
 
 android {
-    namespace 'ni.shikatu.re_extera'
+    namespace 'ni.shikatu.ne_extera'
     compileSdk 35
 
     buildFeatures {

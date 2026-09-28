@@ -1,0 +1,323 @@
+package ni.shikatu.ne_extera.hooks;
+
+import android.content.Context;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.Window;
+import androidx.collection.LongSparseArray;
+import com.exteragram.messenger.plugins.Plugin;
+import com.exteragram.messenger.plugins.PythonPluginsEngine;
+import de.robv.android.xposed.XC_MethodHook;
+import de.robv.android.xposed.XposedBridge;
+import java.util.ArrayList;
+import java.util.concurrent.CountDownLatch;
+import ni.shikatu.ne_extera.Main;
+import ni.shikatu.ne_extera.hooks.chatactivity.HasSelectedNoForwardsMessage;
+import ni.shikatu.ne_extera.hooks.chatactivity.NotificationCenterDidLoad;
+import ni.shikatu.ne_extera.hooks.chatactivity.ProcessDeletedMessages;
+import ni.shikatu.ne_extera.hooks.chatactivity.ProcessNewMessages;
+import ni.shikatu.ne_extera.hooks.chatactivity.exclusions.FragmentCreate;
+import ni.shikatu.ne_extera.hooks.chatactivity.menuhook.FillMessageMenu;
+import ni.shikatu.ne_extera.hooks.chatactivity.menuhook.ProcessSelectedOption;
+import ni.shikatu.ne_extera.hooks.chatactivity.secretmedia.SendSecretMediaDelete;
+import ni.shikatu.ne_extera.hooks.chatactivity.secretmedia.SendSecretMessageRead;
+import ni.shikatu.ne_extera.hooks.chatmessagecell.DidPressButton;
+import ni.shikatu.ne_extera.hooks.chatmessagecell.MeasureTime;
+import ni.shikatu.ne_extera.hooks.chatmessagecell.SecretVoicePlayerDismiss;
+import ni.shikatu.ne_extera.hooks.connectionsmanager.SendRequest;
+import ni.shikatu.ne_extera.hooks.dialogcell.FilterDialogCellPreview;
+import ni.shikatu.ne_extera.hooks.dialogsactivity.DialogsActivityHook;
+import ni.shikatu.ne_extera.hooks.dialogsactivity.GetDialogsArray;
+import ni.shikatu.ne_extera.hooks.messagesstorage.MarkMessagesAsDeletedInternal;
+import ni.shikatu.ne_extera.hooks.messagesstorage.MarkMessagesAsDeletedInternalRange;
+import ni.shikatu.ne_extera.hooks.messagesstorage.UpdateDialogsWithDeletedMessages;
+import ni.shikatu.ne_extera.hooks.flagsecure.FlagSecureReasonAttach;
+import ni.shikatu.ne_extera.hooks.flagsecure.WindowManagerImpl;
+import ni.shikatu.ne_extera.hooks.flagsecure.WindowSetFlags;
+import ni.shikatu.ne_extera.hooks.messageobject.CanDeleteMessage;
+import ni.shikatu.ne_extera.hooks.messageobject.CanForwardMessage;
+import ni.shikatu.ne_extera.hooks.messagescontroller.CheckDeletingTask;
+import ni.shikatu.ne_extera.hooks.messagescontroller.DeleteMessages;
+import ni.shikatu.ne_extera.hooks.messagescontroller.FilterShadowbannedDialogs;
+import ni.shikatu.ne_extera.hooks.messagescontroller.IsChatNoForwards;
+import ni.shikatu.ne_extera.hooks.messagescontroller.IsUserNoForwards;
+import ni.shikatu.ne_extera.hooks.messagescontroller.ProcessLoadedDialogs;
+import ni.shikatu.ne_extera.hooks.messagescontroller.ProcessUpdates;
+import ni.shikatu.ne_extera.hooks.messagescontroller.SortDialogsHook;
+import ni.shikatu.ne_extera.hooks.messagesstorage.MarkMessagesAsDeletedInternal;
+import ni.shikatu.ne_extera.hooks.messagesstorage.UpdateDialogsWithDeletedMessages;
+import ni.shikatu.ne_extera.hooks.navigation.AppNavigationGhostEditorHook;
+import ni.shikatu.ne_extera.hooks.navigation.DrawerMenuGhostHook;
+import ni.shikatu.ne_extera.hooks.notificationmanager.FilterShadowbannedNotifications;
+import ni.shikatu.ne_extera.hooks.notificationmanager.RemoveDeletedMessagesFromNotification;
+import ni.shikatu.ne_extera.hooks.pluginsengine.OpenSettingsHook;
+import ni.shikatu.ne_extera.hooks.profileactivity.ProfileMenuShadowban;
+import ni.shikatu.ne_extera.hooks.profileactivity.UpdateProfileData;
+import ni.shikatu.ne_extera.hooks.sendmessageshelper.SendMessage;
+import ni.shikatu.ne_extera.hooks.sendmessageshelper.SendMessageForwardHook;
+import ni.shikatu.ne_extera.hooks.userconfig.isPremium;
+import ni.shikatu.ne_extera.settings.Settings;
+import ni.shikatu.ne_extera.utils.GhostMenuHelper;
+import org.telegram.messenger.LocaleController;
+import org.telegram.messenger.FlagSecureReason;
+import org.telegram.messenger.MessageObject;
+import org.telegram.messenger.MessageSuggestionParams;
+import org.telegram.messenger.MessagesController;
+import org.telegram.messenger.MessagesStorage;
+import org.telegram.messenger.NotificationsController;
+import org.telegram.messenger.SendMessagesHelper;
+import org.telegram.messenger.UserConfig;
+import org.telegram.tgnet.ConnectionsManager;
+import org.telegram.tgnet.QuickAckDelegate;
+import org.telegram.tgnet.RequestDelegate;
+import org.telegram.tgnet.RequestDelegateTimestamp;
+import org.telegram.tgnet.TLObject;
+import org.telegram.tgnet.TLRPC;
+import org.telegram.tgnet.WriteToSocketDelegate;
+import org.telegram.ui.ActionBar.BaseFragment;
+import org.telegram.ui.Cells.ChatMessageCell;
+import org.telegram.ui.Cells.DialogCell;
+import org.telegram.ui.ChatActivity;
+import org.telegram.ui.Components.ItemOptions;
+import org.telegram.ui.Components.UItem;
+import org.telegram.ui.Components.UniversalAdapter;
+import org.telegram.ui.DialogsActivity;
+import org.telegram.ui.ProfileActivity;
+import org.telegram.ui.SecretVoicePlayer;
+
+public final class HookInit {
+    private final ArrayList<XC_MethodHook.Unhook> hooks = new ArrayList<>();
+    public XC_MethodHook.Unhook sendRequestHook;
+
+    /* JADX INFO: Access modifiers changed from: private */
+    @FunctionalInterface
+    interface HookRegistrar {
+        XC_MethodHook.Unhook register() throws Throwable;
+    }
+
+    public static boolean isActive = true;
+
+    public void init() {
+        isActive = true;
+        try {
+            startIntercepting();
+        } catch (Exception e) {
+            Main.log("Fail on startIntercepting: %s", e.getMessage());
+        }
+    }
+
+    private void addHook(XC_MethodHook.Unhook hook) {
+        if (hook != null) {
+            this.hooks.add(hook);
+        }
+    }
+
+    private void tryAddHook(String name, HookRegistrar registrar) {
+        try {
+            addHook(registrar.register());
+        } catch (Throwable e) {
+            Main.log("Failed to hook %s: %s", name, e.getMessage());
+        }
+    }
+
+    private void tryHook(String name, final Class<?> clazz, final String methodName, final XC_MethodHook hook, final Class<?>... parameterTypes) {
+        tryAddHook(name, new HookRegistrar() { 
+            @Override // ni.shikatu.ne_extera.hooks.HookInit.HookRegistrar
+            public final XC_MethodHook.Unhook register() {
+                try {
+                    return XposedBridge.hookMethod(clazz.getDeclaredMethod(methodName, parameterTypes), hook);
+                } catch (NoSuchMethodException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
+    }
+
+    private void tryHookByArgCount(String name, final Class<?> clazz, final String methodName, final int paramCount, final XC_MethodHook hook) {
+        tryAddHook(name, new HookRegistrar() {
+            @Override
+            public final XC_MethodHook.Unhook register() {
+                java.lang.reflect.Method m = ni.shikatu.ne_extera.utils.HookLookup.findByArgCount(clazz, methodName, paramCount);
+                if (m == null) {
+                    ni.shikatu.ne_extera.utils.HookLookup.logMiss(name, clazz, methodName);
+                    throw new RuntimeException(new NoSuchMethodException(clazz.getName() + "." + methodName + " with " + paramCount + " args"));
+                }
+                return XposedBridge.hookMethod(m, hook);
+            }
+        });
+    }
+
+    private void tryHookByMinArgCount(String name, final Class<?> clazz, final String methodName, final int minParamCount, final XC_MethodHook hook) {
+        tryAddHook(name, new HookRegistrar() {
+            @Override
+            public final XC_MethodHook.Unhook register() {
+                java.lang.reflect.Method m = ni.shikatu.ne_extera.utils.HookLookup.findByMinArgCount(clazz, methodName, minParamCount);
+                if (m == null) {
+                    ni.shikatu.ne_extera.utils.HookLookup.logMiss(name, clazz, methodName);
+                    throw new RuntimeException(new NoSuchMethodException(clazz.getName() + "." + methodName + " with >= " + minParamCount + " args"));
+                }
+                return XposedBridge.hookMethod(m, hook);
+            }
+        });
+    }
+
+    public void startSendRequestHook() {
+        try {
+            this.sendRequestHook = XposedBridge.hookMethod(ConnectionsManager.class.getDeclaredMethod("sendRequestInternal", TLObject.class, RequestDelegate.class, RequestDelegateTimestamp.class, QuickAckDelegate.class, WriteToSocketDelegate.class, Integer.TYPE, Integer.TYPE, Integer.TYPE, Boolean.TYPE, Integer.TYPE), new SendRequest());
+        } catch (Throwable e) {
+            Main.log("Failed to hook ConnectionsManager.sendRequestInternal: %s", e.getMessage());
+        }
+    }
+
+    public void startIntercepting() {
+        startSendRequestHook();
+        tryHook("MessagesController.processUpdates", MessagesController.class, "processUpdates", new ProcessUpdates(), TLRPC.Updates.class, Boolean.TYPE);
+        tryHook("MessagesController.putUsers", MessagesController.class, "putUsers", new ni.shikatu.ne_extera.hooks.messagescontroller.PutUsers(), ArrayList.class, Boolean.TYPE);
+        tryHook("MessagesController.isChatNoForwards(Chat)", MessagesController.class, "isChatNoForwards", new IsChatNoForwards(), TLRPC.Chat.class);
+        tryHook("MessagesController.isChatNoForwards(long)", MessagesController.class, "isChatNoForwards", new IsChatNoForwards(), Long.TYPE);
+        tryHook("MessagesController.isUserNoForwards", MessagesController.class, "isUserNoForwards", new IsUserNoForwards(), TLRPC.UserFull.class);
+        tryHook("MessagesController.checkDeletingTask", MessagesController.class, "checkDeletingTask", new CheckDeletingTask(), Boolean.TYPE);
+        tryHookByMinArgCount("MessagesController.deleteMessages", MessagesController.class, "deleteMessages", 7, new DeleteMessages());
+        tryHook("MessagesController.getDialogs", MessagesController.class, "getDialogs", new FilterShadowbannedDialogs(), Integer.TYPE);
+        tryHook("MessagesController.sortDialogs", MessagesController.class, "sortDialogs", new SortDialogsHook(), LongSparseArray.class);
+        tryHook("MessagesController.processLoadedDialogs", MessagesController.class, "processLoadedDialogs", new ProcessLoadedDialogs(), TLRPC.messages_Dialogs.class, ArrayList.class, ArrayList.class, Integer.TYPE, Integer.TYPE, Integer.TYPE, Integer.TYPE, Boolean.TYPE, Boolean.TYPE, Boolean.TYPE);
+        tryHook("SecretVoicePlayer.dismiss", SecretVoicePlayer.class, "dismiss", new SecretVoicePlayerDismiss(), new Class[0]);
+        // Telegram 12.9.0 changed method signatures and obfuscated internal methods.
+        // markMessagesAsDeleted: (long, ArrayList, boolean, boolean, int, int)
+        tryHook("MessagesStorage.markMessagesAsDeleted", MessagesStorage.class, "markMessagesAsDeleted", new MarkMessagesAsDeletedInternal(), Long.TYPE, ArrayList.class, Boolean.TYPE, Boolean.TYPE, Integer.TYPE, Integer.TYPE);
+        // Fallbacks for older Telegram versions and channel single-message variants
+        tryHook("MessagesStorage.markMessagesAsDeletedInternal", MessagesStorage.class, "markMessagesAsDeletedInternal", new MarkMessagesAsDeletedInternal(), Long.TYPE, ArrayList.class, Boolean.TYPE, Integer.TYPE, Integer.TYPE);
+        tryHook("MessagesStorage.markMessagesAsDeleted(channel)", MessagesStorage.class, "markMessagesAsDeleted", new MarkMessagesAsDeletedInternal(), Long.TYPE, Integer.TYPE, Boolean.TYPE, Boolean.TYPE);
+        tryHook("MessagesStorage.markMessagesAsDeletedInternal(channel)", MessagesStorage.class, "markMessagesAsDeletedInternal", new MarkMessagesAsDeletedInternal(), Long.TYPE, Integer.TYPE, Boolean.TYPE);
+        // Range deletions: markMessagesAsDeleted(long did, int maxMid, boolean isChannel, boolean isTopic)
+        tryHook("MessagesStorage.markMessagesAsDeleted(range)", MessagesStorage.class, "markMessagesAsDeleted", new MarkMessagesAsDeletedInternalRange(), Long.TYPE, Integer.TYPE, Boolean.TYPE, Boolean.TYPE);
+        tryHook("MessagesStorage.markMessagesAsDeletedInternal(range)", MessagesStorage.class, "markMessagesAsDeletedInternal", new MarkMessagesAsDeletedInternalRange(), Long.TYPE, Integer.TYPE, Boolean.TYPE);
+
+        // updateDialogsWithDeletedMessages: (long, long, ArrayList, ArrayList)
+        tryHook("MessagesStorage.updateDialogsWithDeletedMessages", MessagesStorage.class, "updateDialogsWithDeletedMessages", new UpdateDialogsWithDeletedMessages(), Long.TYPE, Long.TYPE, ArrayList.class, ArrayList.class);
+        // Fallbacks for older Telegram versions
+        tryHook("MessagesStorage.updateDialogsWithDeletedMessages_old", MessagesStorage.class, "updateDialogsWithDeletedMessages", new UpdateDialogsWithDeletedMessages(), Long.TYPE, Long.TYPE, ArrayList.class, ArrayList.class, Boolean.TYPE);
+        tryHook("MessagesStorage.updateDialogsWithDeletedMessagesInternal", MessagesStorage.class, "updateDialogsWithDeletedMessagesInternal", new UpdateDialogsWithDeletedMessages(), Long.TYPE, Long.TYPE, ArrayList.class, ArrayList.class);
+        tryHook("ChatMessageCell.didPressButton", ChatMessageCell.class, "didPressButton", new DidPressButton(), Boolean.TYPE, Boolean.TYPE);
+        tryHook("ChatMessageCell.measureTime", ChatMessageCell.class, "measureTime", new MeasureTime(), MessageObject.class);
+        if (anyAccountIsPremium()) {
+            Settings.setLocalPremium(false);
+        }
+        tryHook("UserConfig.isPremium", UserConfig.class, "isPremium", new isPremium(), new Class[0]);
+        tryHookByArgCount("UserConfig.setCurrentUser", UserConfig.class, "setCurrentUser", 1, new isPremium.SetCurrentUserHook());
+        tryHookByArgCount("MessagesController.putUser(2arg)", MessagesController.class, "putUser", 2, new isPremium.PutUserHook());
+        tryHookByArgCount("MessagesController.putUser(3arg)", MessagesController.class, "putUser", 3, new isPremium.PutUserHook());
+        tryHookByArgCount("MessagesController.putUsers(premium)", MessagesController.class, "putUsers", 2, new isPremium.PutUsersHook());
+        try {
+            Class<?> clazz = Class.forName("android.view.WindowManagerImpl");
+            tryHook("WindowManagerImpl.addView", clazz, "addView", new WindowManagerImpl(), View.class, ViewGroup.LayoutParams.class);
+        } catch (ClassNotFoundException e) {
+            Main.log("WindowManagerImpl not found: %s", e.getMessage());
+        }
+        tryHook("Window.setFlags", Window.class, "setFlags", new WindowSetFlags(), Integer.TYPE, Integer.TYPE);
+        tryHook("FlagSecureReason.attach", FlagSecureReason.class, "attach", new FlagSecureReasonAttach(), new Class[0]);
+        tryHook("SendMessagesHelper.sendMessage(params)", SendMessagesHelper.class, "sendMessage", new SendMessage(), SendMessagesHelper.SendMessageParams.class);
+        tryHook("SendMessagesHelper.sendMessage(forwards)", SendMessagesHelper.class, "sendMessage", new SendMessageForwardHook(), ArrayList.class, Long.TYPE, Boolean.TYPE, Boolean.TYPE, Boolean.TYPE, Integer.TYPE, Integer.TYPE, MessageObject.class, Integer.TYPE, Long.TYPE, Long.TYPE, MessageSuggestionParams.class);
+        tryHook("NotificationsController.removeDeletedMessagesFromNotifications", NotificationsController.class, "removeDeletedMessagesFromNotifications", new RemoveDeletedMessagesFromNotification(), LongSparseArray.class, Boolean.TYPE);
+        tryHook("NotificationsController.processNewMessages", NotificationsController.class, "processNewMessages", new FilterShadowbannedNotifications(), ArrayList.class, Boolean.TYPE, Boolean.TYPE, CountDownLatch.class);
+        tryHook("MessageObject.canDeleteMessage", MessageObject.class, "canDeleteMessage", new CanDeleteMessage(), Boolean.TYPE, TLRPC.Chat.class);
+        tryHook("MessageObject.canForwardMessage", MessageObject.class, "canForwardMessage", new CanForwardMessage(), new Class[0]);
+        tryHook("ChatActivity.fillMessageMenu", ChatActivity.class, "fillMessageMenu", new FillMessageMenu(), MessageObject.class, ArrayList.class, ArrayList.class, ArrayList.class);
+        tryHook("ChatActivity.processSelectedOption", ChatActivity.class, "processSelectedOption", new ProcessSelectedOption(), Integer.TYPE);
+        tryHook("LocaleController.formatUserStatus", LocaleController.class, "formatUserStatus", new ni.shikatu.ne_extera.hooks.localecontroller.FormatUserStatus(), Integer.TYPE, TLRPC.User.class, boolean[].class, boolean[].class, boolean[].class);
+        tryHook("LocaleController.formatUserStatus(4arg)", LocaleController.class, "formatUserStatus", new ni.shikatu.ne_extera.hooks.localecontroller.FormatUserStatus(), Integer.TYPE, TLRPC.User.class, boolean[].class, boolean[].class);
+        tryHook("ChatActivity.createView", ChatActivity.class, "createView", new FragmentCreate(), Context.class);
+        tryHook("ChatActivity.hasSelectedNoforwardsMessage", ChatActivity.class, "hasSelectedNoforwardsMessage", new HasSelectedNoForwardsMessage(), new Class[0]);
+        tryHook("ChatActivity.sendSecretMediaDelete", ChatActivity.class, "sendSecretMediaDelete", new SendSecretMediaDelete(), MessageObject.class);
+        tryHook("ChatActivity.sendSecretMessageRead", ChatActivity.class, "sendSecretMessageRead", new SendSecretMessageRead(), MessageObject.class, Boolean.TYPE);
+        tryHook("MessagesController.markMentionMessageAsRead", MessagesController.class, "markMentionMessageAsRead", new ni.shikatu.ne_extera.hooks.messagescontroller.MarkMentionMessageAsReadHook(), Integer.TYPE, Long.TYPE, Long.TYPE);
+        tryHook("ChatActivity.processDeletedMessages", ChatActivity.class, "processDeletedMessages", new ProcessDeletedMessages(), ArrayList.class, Long.TYPE, Boolean.TYPE, Boolean.TYPE);
+        tryHook("ChatActivity.processNewMessages", ChatActivity.class, "processNewMessages", new ProcessNewMessages(), ArrayList.class, Boolean.TYPE);
+        tryHook("ChatActivity.didReceivedNotification", ChatActivity.class, "didReceivedNotification", new NotificationCenterDidLoad(), Integer.TYPE, Integer.TYPE, Object[].class);
+        tryHook("DialogCell.update", DialogCell.class, "update", new FilterDialogCellPreview(), Integer.TYPE, Boolean.TYPE);
+        tryHook("DialogsActivity.getDialogsArray", DialogsActivity.class, "getDialogsArray", new GetDialogsArray(), Integer.TYPE, Integer.TYPE, Integer.TYPE, Boolean.TYPE);
+        tryHook("DialogsActivity.addMainMenuConfiguredItems", DialogsActivity.class, "addMainMenuConfiguredItems", new DialogsActivityHook(DialogsActivityHook.Mode.ADD_ITEMS), ItemOptions.class);
+        tryHook("DialogsActivity.addMainMenuConfiguredItem", DialogsActivity.class, "addMainMenuConfiguredItem", new DialogsActivityHook(DialogsActivityHook.Mode.ADD_ITEM), ItemOptions.class, Integer.TYPE);
+        
+        try {
+            Class<?> mainMenuHelperClass = Class.forName("com.exteragram.messenger.utils.chats.MainMenuHelper");
+            Class<?> menuContextClass = Class.forName("com.exteragram.messenger.utils.chats.MainMenuHelper$MenuContext");
+            
+            // Hook 2-argument version
+            tryHook("MainMenuHelper.addConfiguredItemOptions", mainMenuHelperClass, "addConfiguredItemOptions", new DialogsActivityHook(DialogsActivityHook.Mode.ADD_ITEMS), ItemOptions.class, menuContextClass);
+            // Hook 3-argument version (used by MainTabsActivity)
+            tryHook("MainMenuHelper.addConfiguredItemOptions(IntPredicate)", mainMenuHelperClass, "addConfiguredItemOptions", new DialogsActivityHook(DialogsActivityHook.Mode.ADD_ITEMS), ItemOptions.class, menuContextClass, java.util.function.IntPredicate.class);
+            
+            tryHook("MainMenuHelper.addConfiguredItemOption", mainMenuHelperClass, "addConfiguredItemOption", new DialogsActivityHook(DialogsActivityHook.Mode.ADD_ITEM), ItemOptions.class, menuContextClass, Integer.TYPE);
+        } catch (ClassNotFoundException e) {
+            Main.log("MainMenuHelper not found, using legacy DialogsActivity hooks only");
+        }
+        tryHook("ProfileActivity.updateProfileData", ProfileActivity.class, "updateProfileData", new UpdateProfileData(), Boolean.TYPE);
+        tryHook("MessagesController.getSponsoredMessages", MessagesController.class, "getSponsoredMessages", new ni.shikatu.ne_extera.hooks.messagescontroller.DisableAds(), Long.TYPE);
+        
+        tryHook("UserObject.getColorId", org.telegram.messenger.UserObject.class, "getColorId", new ni.shikatu.ne_extera.hooks.peercolor.DisableColoredReplies.UserColorId(), TLRPC.User.class);
+        tryHook("UserObject.getEmojiId", org.telegram.messenger.UserObject.class, "getEmojiId", new ni.shikatu.ne_extera.hooks.peercolor.DisableColoredReplies.UserEmojiId(), TLRPC.User.class);
+        tryHook("ChatObject.getColorId", org.telegram.messenger.ChatObject.class, "getColorId", new ni.shikatu.ne_extera.hooks.peercolor.DisableColoredReplies.ChatColorId(), TLRPC.Chat.class);
+        tryHook("ChatObject.getEmojiId", org.telegram.messenger.ChatObject.class, "getEmojiId", new ni.shikatu.ne_extera.hooks.peercolor.DisableColoredReplies.ChatEmojiId(), TLRPC.Chat.class);
+        
+        tryHook("ChatMessageCell.setMessageObject", org.telegram.ui.Cells.ChatMessageCell.class, "setMessageObject", new ni.shikatu.ne_extera.hooks.chatmessagecell.TransparentDeletedMessages(), MessageObject.class, MessageObject.GroupedMessages.class, Boolean.TYPE, Boolean.TYPE, Boolean.TYPE, Boolean.TYPE);
+        tryHook("ChatMessageCell.onMeasure", org.telegram.ui.Cells.ChatMessageCell.class, "onMeasure", new ni.shikatu.ne_extera.hooks.chatmessagecell.HideFilteredCell(), Integer.TYPE, Integer.TYPE);
+        tryHook("ChatMessageCell.setAlpha", org.telegram.ui.Cells.ChatMessageCell.class, "setAlpha", new ni.shikatu.ne_extera.hooks.chatmessagecell.TransparentDeletedMessagesAlpha(), Float.TYPE);
+        
+        tryHook("MessagesController.markDialogAsRead", MessagesController.class, "markDialogAsRead", new ni.shikatu.ne_extera.hooks.messagescontroller.MarkDialogAsRead(), Long.TYPE, Integer.TYPE, Integer.TYPE, Integer.TYPE, Boolean.TYPE, Long.TYPE, Integer.TYPE, Boolean.TYPE, Integer.TYPE);
+        
+        tryHook("ConnectionsManager.setAppPaused", org.telegram.tgnet.ConnectionsManager.class, "setAppPaused", new ni.shikatu.ne_extera.hooks.connectionsmanager.WorkInBackground(), Boolean.TYPE, Boolean.TYPE);
+        
+        tryHook("ProfileActivity.createActionBarMenu", ProfileActivity.class, "createActionBarMenu", new ProfileMenuShadowban(), Boolean.TYPE);
+        GhostMenuHelper.registerPluginMenuItem();
+
+        try {
+            Class<?> drawerMenuViewClass = Class.forName("com.exteragram.messenger.drawer.DrawerMenuView");
+            tryHook("DrawerMenuView.rebuildMenu", drawerMenuViewClass, "rebuildMenu", new DrawerMenuGhostHook(), Integer.TYPE, BaseFragment.class);
+        } catch (ClassNotFoundException ignored) {
+        }
+
+        try {
+            Class<?> appNavClass = Class.forName("com.exteragram.messenger.preferences.appearance.AppNavigationPreferencesActivity");
+            tryHook("AppNavigationPreferencesActivity.initItemDetails", appNavClass, "initItemDetails", new AppNavigationGhostEditorHook(AppNavigationGhostEditorHook.Mode.INIT_ITEM_DETAILS), new Class[0]);
+            tryHook("AppNavigationPreferencesActivity.addMenuSection", appNavClass, "addMenuSection", new AppNavigationGhostEditorHook(AppNavigationGhostEditorHook.Mode.ADD_MENU_SECTION), ArrayList.class, UniversalAdapter.class, String.class, ArrayList.class, Boolean.TYPE);
+            tryHook("AppNavigationPreferencesActivity.fillItems", appNavClass, "fillItems", new AppNavigationGhostEditorHook(AppNavigationGhostEditorHook.Mode.FILL_ITEMS), ArrayList.class, UniversalAdapter.class);
+            tryHook("AppNavigationPreferencesActivity.onClick", appNavClass, "onClick", new AppNavigationGhostEditorHook(AppNavigationGhostEditorHook.Mode.ON_CLICK), UItem.class, View.class, Integer.TYPE, Float.TYPE, Float.TYPE);
+            tryHook("AppNavigationPreferencesActivity.updateConfigFromReorder", appNavClass, "updateConfigFromReorder", new AppNavigationGhostEditorHook(AppNavigationGhostEditorHook.Mode.UPDATE_REORDER), Integer.TYPE, ArrayList.class);
+            tryHook("AppNavigationPreferencesActivity.resetToDefault", appNavClass, "resetToDefault", new AppNavigationGhostEditorHook(AppNavigationGhostEditorHook.Mode.RESET_TO_DEFAULT), new Class[0]);
+        } catch (ClassNotFoundException ignored) {
+        }
+    }
+
+    private static boolean anyAccountIsPremium() {
+        TLRPC.User user;
+        for (int i = 0; i < 16; i++) {
+            UserConfig cfg = UserConfig.getInstance(i);
+            if (cfg != null && cfg.isClientActivated() && (user = cfg.getCurrentUser()) != null && user.premium) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void onUnload() {
+        isActive = false;
+        if (this.sendRequestHook != null) {
+            try {
+                this.sendRequestHook.unhook();
+            } catch (Throwable e) {
+                Main.log("Failed to unhook sendRequestHook: %s", e.getMessage());
+            }
+            this.sendRequestHook = null;
+        }
+        for (XC_MethodHook.Unhook hook : this.hooks) {
+            try {
+                hook.unhook();
+            } catch (Throwable e) {
+                Main.log("Failed to unhook: %s", e.getMessage());
+            }
+        }
+        this.hooks.clear();
+        GhostMenuHelper.unregisterPluginMenuItem();
+    }
+}
