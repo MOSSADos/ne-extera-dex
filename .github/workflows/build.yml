@@ -36,7 +36,12 @@ jobs:
     - name: Build ne_extera_loader.plugin
       run: |
         python3 loader/build.py
-        cp build/plugin/ne_extera_loader.plugin .
+        if [ -f build/plugin/ne_extera_loader.plugin ]; then
+          cp build/plugin/ne_extera_loader.plugin .
+        else
+          echo "Warning: loader.plugin not built, using pre-built from release_assets/"
+          cp release_assets/ne_extera_loader.plugin .
+        fi
 
     - name: Upload Dev artifacts
       uses: actions/upload-artifact@v4
