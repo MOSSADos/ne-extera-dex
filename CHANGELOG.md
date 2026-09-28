@@ -2,6 +2,17 @@
 
 All notable changes to this fork from the original re:extera.
 
+## [2.0.0] - 2026-09-28
+
+### Added
+- 🔄 **Auto-update system restored**: DEX now updates automatically without user prompt
+- 🎨 **New red logo design**: Modern Material Design with "Ne" monogram and ghost icon
+- 🗑️ **Custom trash icon messages**: Preview shows "сельский участковый" replying to "фрауд участковый" about Ne:Extera
+
+### Changed
+- 📝 **Credits updated**: Removed @bleizix mentions from metadata and README
+- 🎨 **Logo redesigned**: New red Material Design style with ghost privacy icon
+
 ## [1.0.0] - 2026-09-28
 
 ### Added

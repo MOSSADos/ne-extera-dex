@@ -429,12 +429,26 @@ class Loader:
                     return
 
                 if self._needs_update(remote_version):
-                    self.plugin.log("Update available, prompting user...")
-                    self._prompt_update(remote_version, download_url)
+                    self.plugin.log("Update available, downloading automatically...")
+                    self._auto_update(remote_version, download_url)
             except Exception as e:
                 self.plugin.log(f"Async update failed: {e}")
 
         threading.Thread(target=run_check).start()
+
+    def _auto_update(self, remote_version, download_url):
+        """Automatically download and install update without user prompt"""
+        def show_info_msg(msg):
+            AndroidUtilities.runOnUIThread(UIRunnable(lambda: BulletinHelper.show_info(msg, get_last_fragment())))
+
+        show_info_msg(_localize("downloading"))
+        try:
+            self.download_and_cache(remote_version, download_url)
+            show_info_msg(f"Ne:Extera auto-updated to {remote_version}. Restart to apply.")
+            self.plugin.log(f"Auto-updated to {remote_version}")
+        except Exception as e:
+            show_info_msg(f"Auto-update failed: {e}")
+            self.plugin.log(f"Auto-update failed: {e}")
 
     def _prompt_update(self, remote_version, download_url):
         cached = self.config.get_version(self.channel)

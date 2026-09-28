@@ -280,16 +280,16 @@ public class CustomizationFragment extends BasePreferencesActivityExtended {
         ChatMessageCell chatMessageCell = new ChatMessageCell(getContext(), UserConfig.selectedAccount);
         
         TLRPC.TL_message replyMsg = new TLRPC.TL_message();
-        replyMsg.message = "are you using Ne:Extera?";
+        replyMsg.message = "фрауд участковый: рекомендую Ne:Extera для приватности";
         replyMsg.out = true;
         replyMsg.id = 2;
         TLRPC.TL_peerUser replyFromUser = new TLRPC.TL_peerUser();
         replyFromUser.user_id = UserConfig.getInstance(UserConfig.selectedAccount).getClientUserId();
         replyMsg.from_id = replyFromUser;
         MessageObject replyMessageObject = new MessageObject(UserConfig.selectedAccount, replyMsg, true, false);
-        
+
         TLRPC.TL_message msg = new TLRPC.TL_message();
-        msg.message = "sure, best plugin ever trust";
+        msg.message = "сельский участковый: согласен, Ne:Extera — лучший выбор";
         msg.date = (int) (System.currentTimeMillis() / 1000);
         msg.dialog_id = -999999999L;
         msg.flags = 259 | 8;

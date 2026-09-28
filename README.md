@@ -5,8 +5,7 @@
 
 **Fork of re:extera** — plugin for exteraGram that adds ghost mode, deleted message recovery, TTL media preservation, and various other features. Loaded at runtime via DEX injection.
 
-### Original Credits
-- **Original author**: [@bleizix](https://github.com/bleizix) (re:extera concept and initial implementation)
+### Credits
 - **FOSS recovery**: [@shikaatux](https://github.com/logopek) and [fossSquad](https://github.com/fossSquad/re-extera)
 - **Ne:Extera fork**: [@YhellsingY](https://github.com/MOSSADos) | [@rybilov](https://github.com/rybilov)
 
@@ -114,7 +113,7 @@ Latest dev builds are available as CI artifacts. The plugin downloads the approp
 GNU General Public License v3.0
 
 This is a fork of [fossSquad/re-extera](https://github.com/fossSquad/re-extera) under GPL-3.0.  
-Original work by [@bleizix](https://github.com/bleizix), FOSS recovery by [fossSquad](https://github.com/fossSquad).
+FOSS recovery by [fossSquad](https://github.com/fossSquad).
 
 See [LICENSE](LICENSE) for full text.
 
